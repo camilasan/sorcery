@@ -139,6 +139,18 @@ Rails.application.config.sorcery.configure do |config|
   # config.liveid.callback_url = "http://mydomain.com:3000/oauth/callback?provider=liveid"
   # config.liveid.user_info_mapping = {:username => "name"}
 
+  # For information about JIRA API:
+  # https://developer.atlassian.com/display/JIRADEV/JIRA+REST+API+Example+-+OAuth+authentication
+  # run rake jira:generate_consumer_key to obtain the consumer key
+  # run rake jira:generate_public_cert to obtain the public key
+  # Make sure you have configured the application link properly
+
+  # config.jira.key = "1234567"
+  # config.jira.secret = "jiraTest"
+  # config.jira.site = "http://localhost:2990/jira/plugins/servlet/oauth"
+  # config.jira.signature_method =  "RSA-SHA1"
+  # config.jira.private_key_file = "rsakey.pem"
+
 
   # --- user config ---
   config.user_config do |user|
