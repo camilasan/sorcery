@@ -1,6 +1,9 @@
 # sorcery
 
-**Here**, in this repo sorcery also has Jira as an external provider option.
+This a fork from https://github.com/NoamB/sorcery and
+**here** sorcery has Jira as an external provider option.
+
+====================================================================
 
 Magical Authentication for Rails 3 and 4. Supports ActiveRecord, Mongoid and
 MongoMapper.
