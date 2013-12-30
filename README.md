@@ -1,9 +1,7 @@
-[<img src="https://secure.travis-ci.org/NoamB/sorcery.png"
-/>](http://travis-ci.org/NoamB/sorcery) [<img
-src="https://codeclimate.com/github/NoamB/sorcery.png"
-/>](https://codeclimate.com/github/NoamB/sorcery)
-
 # sorcery
+
+*Here*, in this repo sorcery also has Jira as an external provider option.
+
 Magical Authentication for Rails 3 and 4. Supports ActiveRecord, Mongoid and
 MongoMapper.
 
