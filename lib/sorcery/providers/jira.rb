@@ -11,24 +11,27 @@ module Sorcery
       include Protocols::Oauth
 
       attr_accessor :access_token_path, :authorize_path, :request_token_path,
-                    :user_info_path
+                    :user_info_path, :site, :signature_method, :private_key_file, :callback_url
 
 
       def initialize
         @configuration = {
-            site: 'http://localhost:2990/jira/plugins/servlet/oauth',
             authorize_path: '/authorize',
             request_token_path: '/request-token',
-            access_token_path: '/access-token',
-            signature_method: 'RSA-SHA1',
-            consumer_key: 'test',
-            private_key_file: 'rsakey.pem'
+            access_token_path: '/access-token'
         }
         @user_info_path = '/users/me'
       end
 
       # Override included get_consumer method to provide authorize_path
+      #read extra configurations
       def get_consumer
+        @configuration = @configuration.merge({
+            site: site,
+            signature_method: signature_method,
+            consumer_key: key,
+            private_key_file: private_key_file
+        })
         ::OAuth::Consumer.new(@key, @secret, @configuration)
       end
 
