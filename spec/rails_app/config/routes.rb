@@ -23,6 +23,7 @@ AppRoot::Application.routes.draw do
     get :login_at_test2
     get :login_at_test3
     get :login_at_test4
+    get :login_at_jira
     get :test_return_to_with_external2
     get :test_return_to_with_external3
     get :test_return_to_with_external4

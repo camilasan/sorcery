@@ -167,6 +167,26 @@ describe SorceryController do
         User.last.last_login_at.should be_nil
       end
     end
+
+    context "when jira" do
+      before(:each) do
+        sorcery_controller_property_set(:external_providers, [:jira])
+        sorcery_controller_external_property_set(:jira, :key, "YourConsumerKeyHere")
+        sorcery_controller_external_property_set(:jira, :secret, "JiraLoginExample")
+        sorcery_controller_external_property_set(:jira, :site, "http://localhost:2990/jira/plugins/servlet/oauth")
+        sorcery_controller_external_property_set(:jira, :signature_method, "RSA-SHA1")
+        sorcery_controller_external_property_set(:jira, :private_key_file, "rsakey.pem")
+        sorcery_controller_external_property_set(:jira, :callback_url, "http://localhost:3000/sessions/show/")
+        create_new_external_user(:jira)
+      end
+
+      it "user logins successfully" do
+        get :login_at_jira
+        session[:request_token].should_not be_nil
+        response.should be_a_redirect
+      end
+
+    end
   end
 
   describe SorceryController, "OAuth with session timeout features" do

@@ -96,6 +96,10 @@ class SorceryController < ActionController::Base
     login_at(:liveid)
   end
 
+  def login_at_jira
+    login_at(:jira)
+  end
+
   def login_at_test_with_state
     login_at(:facebook, {state: 'bla'})
   end
