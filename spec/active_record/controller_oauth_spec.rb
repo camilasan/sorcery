@@ -176,7 +176,7 @@ describe SorceryController do
         sorcery_controller_external_property_set(:jira, :site, "http://localhost:2990/jira/plugins/servlet/oauth")
         sorcery_controller_external_property_set(:jira, :signature_method, "RSA-SHA1")
         sorcery_controller_external_property_set(:jira, :private_key_file, "rsakey.pem")
-        sorcery_controller_external_property_set(:jira, :callback_url, "http://localhost:3000/sessions/show/")
+        sorcery_controller_external_property_set(:jira, :callback_url, "http://localhost:3000/your-app-here/")
         create_new_external_user(:jira)
       end
 
