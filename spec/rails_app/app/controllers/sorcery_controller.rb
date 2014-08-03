@@ -24,7 +24,7 @@ class SorceryController < ActionController::Base
   end
 
   def test_auto_login
-    @user = User.find(:first)
+    @user = User.first
     auto_login(@user)
     @result = current_user
     render nothing: true
@@ -76,23 +76,25 @@ class SorceryController < ActionController::Base
     render text: 'HTTP Basic Auth'
   end
 
-  def login_at_test
+  def login_at_test_twitter
     login_at(:twitter)
   end
 
-  def login_at_test2
+  alias :login_at_test :login_at_test_twitter
+
+  def login_at_test_facebook
     login_at(:facebook)
   end
 
-  def login_at_test3
+  def login_at_test_github
     login_at(:github)
   end
 
-  def login_at_test4
+  def login_at_test_google
     login_at(:google)
   end
 
-  def login_at_test5
+  def login_at_test_liveid
     login_at(:liveid)
   end
 
@@ -100,11 +102,15 @@ class SorceryController < ActionController::Base
     login_at(:jira)
   end
 
+  def login_at_test_vk
+    login_at(:vk)
+  end
+
   def login_at_test_with_state
     login_at(:facebook, {state: 'bla'})
   end
 
-  def test_login_from
+  def test_login_from_twitter
     if @user = login_from(:twitter)
       redirect_to 'bla', notice: 'Success!'
     else
@@ -112,7 +118,9 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_login_from2
+  alias :test_login_from :test_login_from_twitter
+
+  def test_login_from_facebook
     if @user = login_from(:facebook)
       redirect_to 'bla', notice: 'Success!'
     else
@@ -120,7 +128,7 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_login_from3
+  def test_login_from_github
     if @user = login_from(:github)
       redirect_to 'bla', notice: 'Success!'
     else
@@ -128,7 +136,7 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_login_from4
+  def test_login_from_google
     if @user = login_from(:google)
       redirect_to 'bla', notice: 'Success!'
     else
@@ -136,7 +144,7 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_login_from5
+  def test_login_from_liveid
     if @user = login_from(:liveid)
       redirect_to 'bla', notice: 'Success!'
     else
@@ -144,7 +152,15 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_return_to_with_external
+  def test_login_from_vk
+    if @user = login_from(:vk)
+      redirect_to 'bla', notice: 'Success!'
+    else
+      redirect_to 'blu', alert: 'Failed!'
+    end
+  end
+
+  def test_return_to_with_external_twitter
     if @user = login_from(:twitter)
       redirect_back_or_to 'bla', notice: 'Success!'
     else
@@ -152,7 +168,9 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_return_to_with_external2
+  alias :test_return_to_with_external :test_return_to_with_external_twitter
+
+  def test_return_to_with_external_facebook
     if @user = login_from(:facebook)
       redirect_back_or_to 'bla', notice: 'Success!'
     else
@@ -160,7 +178,7 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_return_to_with_external3
+  def test_return_to_with_external_github
     if @user = login_from(:github)
       redirect_back_or_to 'bla', notice: 'Success!'
     else
@@ -168,7 +186,7 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_return_to_with_external4
+  def test_return_to_with_external_google
     if @user = login_from(:google)
       redirect_back_or_to 'bla', notice: 'Success!'
     else
@@ -176,8 +194,16 @@ class SorceryController < ActionController::Base
     end
   end
 
-  def test_return_to_with_external5
+  def test_return_to_with_external_liveid
     if @user = login_from(:liveid)
+      redirect_back_or_to 'bla', notice: 'Success!'
+    else
+      redirect_to 'blu', alert: 'Failed!'
+    end
+  end
+
+  def test_return_to_with_external_vk
+    if @user = login_from(:vk)
       redirect_back_or_to 'bla', notice: 'Success!'
     else
       redirect_to 'blu', alert: 'Failed!'

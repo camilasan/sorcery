@@ -1,4 +1,5 @@
 require 'mongoid'
+require 'sorcery'
 
 Mongoid.configure do |config|
   database = "sorcery_mongoid_test"
@@ -14,4 +15,8 @@ end
 
 class TestUser
   include Mongoid::Document
+end
+
+def setup_orm
+  Mongoid.purge!
 end

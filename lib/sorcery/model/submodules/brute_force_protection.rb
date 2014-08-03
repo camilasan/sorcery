@@ -35,10 +35,7 @@ module Sorcery
           end
 
           base.sorcery_config.before_authenticate << :prevent_locked_user_login
-          base.sorcery_config.after_config << :define_brute_force_protection_mongoid_fields if defined?(Mongoid) and base.ancestors.include?(Mongoid::Document)
-          if defined?(MongoMapper) and base.ancestors.include?(MongoMapper::Document)
-            base.sorcery_config.after_config << :define_brute_force_protection_mongo_mapper_fields
-          end
+          base.sorcery_config.after_config << :define_brute_force_protection_fields
           base.extend(ClassMethods)
           base.send(:include, InstanceMethods)
         end
@@ -46,22 +43,16 @@ module Sorcery
         module ClassMethods
           def load_from_unlock_token(token)
             return nil if token.blank?
-            user = find_by_sorcery_token(sorcery_config.unlock_token_attribute_name,token)
+            user = sorcery_adapter.find_by_token(sorcery_config.unlock_token_attribute_name,token)
             user
           end
 
           protected
 
-          def define_brute_force_protection_mongoid_fields
-            field sorcery_config.failed_logins_count_attribute_name,  :type => Integer, :default => 0
-            field sorcery_config.lock_expires_at_attribute_name,      :type => Time
-            field sorcery_config.unlock_token_attribute_name,         :type => String
-          end
-
-          def define_brute_force_protection_mongo_mapper_fields
-            key sorcery_config.failed_logins_count_attribute_name, Integer, :default => 0
-            key sorcery_config.lock_expires_at_attribute_name, Time
-            key sorcery_config.unlock_token_attribute_name, String
+          def define_brute_force_protection_fields
+            sorcery_adapter.define_field sorcery_config.failed_logins_count_attribute_name, Integer, :default => 0
+            sorcery_adapter.define_field sorcery_config.lock_expires_at_attribute_name, Time
+            sorcery_adapter.define_field sorcery_config.unlock_token_attribute_name, String
           end
         end
 
@@ -71,9 +62,12 @@ module Sorcery
           def register_failed_login!
             config = sorcery_config
             return if !unlocked?
-            self.increment(config.failed_logins_count_attribute_name)
-            self.update_many_attributes(config.failed_logins_count_attribute_name => self.send(config.failed_logins_count_attribute_name))
-            self.lock! if self.send(config.failed_logins_count_attribute_name) >= config.consecutive_login_retries_amount_limit
+
+            sorcery_adapter.increment(config.failed_logins_count_attribute_name)
+
+            if self.send(config.failed_logins_count_attribute_name) >= config.consecutive_login_retries_amount_limit
+              lock!
+            end
           end
 
           # /!\
@@ -84,7 +78,11 @@ module Sorcery
             attributes = {config.lock_expires_at_attribute_name => nil,
                           config.failed_logins_count_attribute_name => 0,
                           config.unlock_token_attribute_name => nil}
-            self.update_many_attributes(attributes)
+            sorcery_adapter.update_attributes(attributes)
+          end
+
+          def locked?
+            !unlocked?
           end
 
           protected
@@ -93,7 +91,7 @@ module Sorcery
             config = sorcery_config
             attributes = {config.lock_expires_at_attribute_name => Time.now.in_time_zone + config.login_lock_time_period,
                           config.unlock_token_attribute_name => TemporaryToken.generate_random_token}
-            self.update_many_attributes(attributes)
+            sorcery_adapter.update_attributes(attributes)
 
             unless config.unlock_token_mailer_disabled || config.unlock_token_mailer.nil?
               send_unlock_token_email!
@@ -106,7 +104,9 @@ module Sorcery
           end
 
           def send_unlock_token_email!
-            generic_send_email(:unlock_token_email_method_name, :unlock_token_mailer) unless sorcery_config.unlock_token_email_method_name.nil?
+            return if sorcery_config.unlock_token_email_method_name.nil?
+
+            generic_send_email(:unlock_token_email_method_name, :unlock_token_mailer)
           end
 
           # Prevents a locked user from logging in, and unlocks users that expired their lock time.

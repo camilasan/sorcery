@@ -15,37 +15,31 @@ require 'rails/all'
 require 'rspec/rails'
 require 'timecop'
 
-require "rails_app/config/environment"
+def setup_orm; end
+def teardown_orm; end
 
 require "orm/#{SORCERY_ORM}"
+
+require "rails_app/config/environment"
 
 class TestMailer < ActionMailer::Base;end
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
 RSpec.configure do |config|
-  config.include RSpec::Rails::ControllerExampleGroup, :example_group => { :file_path => /controller(.)*_spec.rb$/ }
-
+  config.include RSpec::Rails::ControllerExampleGroup, :file_path => /controller(.)*_spec.rb$/
+  config.filter_run_excluding :active_record => SORCERY_ORM.to_sym != :active_record
+  config.filter_run_excluding :mongo_mapper => SORCERY_ORM.to_sym != :mongo_mapper
+  config.filter_run_excluding :data_mapper => SORCERY_ORM.to_sym != :data_mapper
+  config.filter_run_excluding :mongoid => SORCERY_ORM.to_sym != :mongoid
   config.mock_with :rspec
 
   config.use_transactional_fixtures = true
 
-  config.before(:suite) do
-    if SORCERY_ORM.to_sym == :active_record
-      ActiveRecord::Migrator.migrate("#{Rails.root}/db/migrate/core")
-    end
-
-    if defined?(Mongoid)
-      Mongoid.purge!
-    end
-  end
-
-  config.after(:suite) do
-    if SORCERY_ORM.to_sym == :active_record
-      ActiveRecord::Migrator.rollback("#{Rails.root}/db/migrate/core")
-    end
-  end
+  config.before(:suite) { setup_orm }
+  config.after(:suite) { teardown_orm }
 
   config.include ::Sorcery::TestHelpers::Internal
   config.include ::Sorcery::TestHelpers::Internal::Rails
+
 end

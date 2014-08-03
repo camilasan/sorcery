@@ -2,36 +2,52 @@ shared_examples_for 'oauth2_controller' do
   describe 'using create_from' do
     before(:each) do
       stub_all_oauth2_requests!
-      User.delete_all
-      Authentication.delete_all
+      User.sorcery_adapter.delete_all
+      Authentication.sorcery_adapter.delete_all
     end
 
-    it 'should create a new user' do
+    it 'creates a new user from facebook' do
       sorcery_model_property_set(:authentications_class, Authentication)
       sorcery_controller_external_property_set(:facebook, :user_info_mapping, { username: 'name' })
-      lambda do
-        get :test_create_from_provider, provider: 'facebook'
-      end.should change(User, :count).by(1)
-      User.first.username.should == 'Noam Ben Ari'
+
+      expect { get :test_create_from_provider, provider: 'facebook' }.to change { User.count }.by 1
+      expect(User.first.username).to eq 'Noam Ben Ari'
     end
 
-    it 'should support nested attributes' do
+    it 'creates a new user from vkontakte with email scope' do
+      sorcery_model_property_set(:authentications_class, Authentication)
+      sorcery_controller_external_property_set(:vk, :user_info_mapping, {:email => "email", :username => "full_name"})
+
+      expect { get :test_create_from_provider, provider: 'vk' }.to change { User.count }.by 1
+      expect(User.first.username).to eq 'Noam Ben Ari'
+      expect(User.first.email).to eq 'nbenari@gmail.com'
+    end
+
+    it 'creates a new user from vkontakte without email scope' do
+      sorcery_model_property_set(:authentications_class, Authentication)
+      sorcery_controller_external_property_set(:vk, :user_info_mapping, {:username => "full_name"})
+      sorcery_controller_external_property_set(:vk, :scope, "")
+
+      expect { get :test_create_from_provider, provider: 'vk' }.to change { User.count }.by 1
+      expect(User.first.username).to eq 'Noam Ben Ari'
+      expect(User.first.email).to be_nil
+    end
+
+    it 'supports nested attributes' do
       sorcery_model_property_set(:authentications_class, Authentication)
       sorcery_controller_external_property_set(:facebook, :user_info_mapping, { username: 'hometown/name' })
-      lambda do
-        get :test_create_from_provider, provider: 'facebook'
-      end.should change(User, :count).by(1)
-      User.first.username.should == 'Haifa, Israel'
+
+      expect { get :test_create_from_provider, provider: 'facebook' }.to change { User.count }.by(1)
+      expect(User.first.username).to eq 'Haifa, Israel'
     end
 
-    it 'should not crash on missing nested attributes' do
+    it 'does not crash on missing nested attributes' do
       sorcery_model_property_set(:authentications_class, Authentication)
       sorcery_controller_external_property_set(:facebook, :user_info_mapping, { username: 'name', created_at: 'does/not/exist' })
-      lambda do
-        get :test_create_from_provider, provider: 'facebook'
-      end.should change(User, :count).by(1)
-      User.first.username.should == 'Noam Ben Ari'
-      User.first.created_at.should_not be_nil
+
+      expect { get :test_create_from_provider, provider: 'facebook' }.to change { User.count }.by 1
+      expect(User.first.username).to eq 'Noam Ben Ari'
+      expect(User.first.created_at).not_to be_nil
     end
 
     describe 'with a block' do
@@ -42,13 +58,12 @@ shared_examples_for 'oauth2_controller' do
         user.authentications.create(provider: 'twitter', uid: '456')
       end
 
-      it 'should not create user' do
+      it 'does not create user' do
         sorcery_model_property_set(:authentications_class, Authentication)
         sorcery_controller_external_property_set(:facebook, :user_info_mapping, { username: 'name' })
-        lambda do
-          # test_create_from_provider_with_block in controller will check for uniqueness of username
-          get :test_create_from_provider_with_block, provider: 'facebook'
-        end.should_not change(User, :count)
+
+        # test_create_from_provider_with_block in controller will check for uniqueness of username
+        expect { get :test_create_from_provider_with_block, provider: 'facebook' }.not_to change { User.count }
       end
 
     end

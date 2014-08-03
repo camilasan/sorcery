@@ -1,17 +1,15 @@
-[<img src="https://secure.travis-ci.org/NoamB/sorcery.png"
-/>](http://travis-ci.org/NoamB/sorcery) [<img
-src="https://codeclimate.com/github/NoamB/sorcery.png"
-/>](https://codeclimate.com/github/NoamB/sorcery)
+[![Build Status](https://travis-ci.org/NoamB/sorcery.svg?branch=master)](https://travis-ci.org/NoamB/sorcery)
+[![Code Climate](https://codeclimate.com/github/NoamB/sorcery.png)](https://codeclimate.com/github/NoamB/sorcery)
 
 # sorcery
-Magical Authentication for Rails 3 and 4. Supports ActiveRecord, Mongoid and
-MongoMapper.
+Magical Authentication for Rails 3 and 4. Supports ActiveRecord,
+DataMapper, Mongoid and MongoMapper.
 
 Inspired by restful_authentication, Authlogic and Devise. Crypto code taken
 almost unchanged from Authlogic. OAuth code inspired by OmniAuth and Ryan
 Bates's railscasts about it.
 
-**Rails 4 status:** [Sorcery 0.8.5](http://rubygems.org/gems/sorcery/versions/0.8.5) is fully tested and ready for Rails 4.0.
+**Rails 4 status:** [Sorcery 0.8.6](http://rubygems.org/gems/sorcery/versions/0.8.6) is fully tested and ready for Rails 4.0 and 4.1.
 
 https://github.com/NoamB/sorcery/wiki/Simple-Password-Authentication
 
@@ -60,9 +58,6 @@ explaining and the rest are commented:
     @user.external? # external users, such as facebook/twitter etc.
     User.authenticates_with_sorcery!
 
-    # activity logging
-    current_users
-
     # http basic auth
     require_login_from_http_basic # this is a before filter
 
@@ -83,6 +78,7 @@ explaining and the rest are commented:
 
     # user activation
     User.load_from_activation_token(token)
+    @user.setup_activation
     @user.activate!
 
 Please see the tutorials in the github wiki for detailed usage information.
@@ -120,7 +116,7 @@ This will generate the core migration file, the initializer and change the
 model class (in the initializer and migration files) to the class 'Person'
 (and its pluralized version, 'people')
 
-    rails generate sorcery:install http_basic_auth external remember_me --migrations
+    rails generate sorcery:install http_basic_auth external remember_me --only-submodules
 
 This will generate only the migration files for the specified submodules and
 will add them to the initializer file.
@@ -154,7 +150,9 @@ STI is supported via a single setting in config/initializers/sorcery.rb.
 
 ## Full Features List by module:
 
-Core (see lib/sorcery/model.rb and lib/sorcery/controller.rb):
+**Core** (see [lib/sorcery/model.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model.rb) and
+[lib/sorcery/controller.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/controller.rb)):
+
 *   login/logout, optional return user to requested url on login, configurable
     redirect for non-logged-in users.
 *   password encryption, algorithms: bcrypt(default), md5, sha1, sha256,
@@ -163,7 +161,8 @@ Core (see lib/sorcery/model.rb and lib/sorcery/controller.rb):
 *   allow multiple fields to serve as username.
 
 
-User Activation (see lib/sorcery/model/submodules/user_activation.rb):
+**User Activation** (see [lib/sorcery/model/submodules/user_activation.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model/submodules/user_activation.rb)):
+
 *   User activation by email with optional success email.
 *   configurable attribute names.
 *   configurable mailer, method name, and attribute name.
@@ -171,37 +170,41 @@ User Activation (see lib/sorcery/model/submodules/user_activation.rb):
 *   Optionally prevent non-active users to login.
 
 
-Reset Password (see lib/sorcery/model/submodules/reset_password.rb):
+**Reset Password** (see [lib/sorcery/model/submodules/reset_password.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model/submodules/reset_password.rb)):
+
 *   Reset password with email verification.
 *   configurable mailer, method name, and attribute name.
 *   configurable temporary token expiration.
 *   configurable time between emails (hammering protection).
 
 
-Remember Me (see lib/sorcery/model/submodules/remember_me.rb):
+**Remember Me** (see [lib/sorcery/model/submodules/remember_me.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model/submodules/remember_me.rb)):
+
 *   Remember me with configurable expiration.
 *   configurable attribute names.
 
 
-Session Timeout (see lib/sorcery/controller/submodules/session_timeout.rb):
+**Session Timeout** (see [lib/sorcery/controller/submodules/session_timeout.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/controller/submodules/session_timeout.rb)):
+
 *   Configurable session timeout.
 *   Optionally session timeout will be calculated from last user action.
 
 
-Brute Force Protection (see
-lib/sorcery/model/submodules/brute_force_protection.rb):
+**Brute Force Protection** (see [lib/sorcery/model/submodules/brute_force_protection.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model/submodules/brute_force_protection.rb)):
+
 *   Brute force login hammering protection.
 *   configurable logins before lock and lock duration.
 
 
-Basic HTTP Authentication (see
-lib/sorcery/controller/submodules/http_basic_auth.rb):
+**Basic HTTP Authentication** (see [lib/sorcery/controller/submodules/http_basic_auth.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/controller/submodules/http_basic_auth.rb)):
+
 *   A before filter for requesting authentication with HTTP Basic.
 *   automatic login from HTTP Basic.
 *   automatic login is disabled if session key changed.
 
 
-Activity Logging (see lib/sorcery/model/submodules/activity_logging.rb):
+**Activity Logging** (see [lib/sorcery/model/submodules/activity_logging.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/model/submodules/activity_logging.rb)):
+
 *   automatic logging of last login, last logout, last activity time and IP
     address for last login.
 *   an easy method of collecting the list of currently logged in users.
@@ -209,14 +212,17 @@ Activity Logging (see lib/sorcery/model/submodules/activity_logging.rb):
     list of logged in users.
 
 
-External (see lib/sorcery/controller/submodules/external.rb):
-*   OAuth1 and OAuth2 support (currently twitter & facebook)
+**External** (see [lib/sorcery/controller/submodules/external.rb](https://github.com/NoamB/sorcery/blob/master/lib/sorcery/controller/submodules/external.rb)):
+
+*   OAuth1 and OAuth2 support (currently: Twitter, Facebook, Github, Google,
+    LinkedIn, VK, LiveID and Xing)
 *   configurable db field names and authentications table.
 
 
 ## Next Planned Features:
 
 I've got some thoughts which include (unordered):
+
 *   Passing a block to encrypt, allowing the developer to define his own mix
     of salting and encrypting
 *   Forgot username, maybe as part of the reset_password module
@@ -241,9 +247,30 @@ In short, an app that works with x.3.1 should be able to upgrade to x.3.2 with
 no code changes. The same cannot be said about upgrading to x.4.0 and above,
 however.
 
+## DataMapper Support
+
+Important notes:
+
+*   Expected to work with DM adapters: dm-mysql-adapter,
+    dm-redis-adapter.
+*   Submodules DM adapter dependent: activity_logging (dm-mysql-adapter)
+*   Usage: include DataMapper::Resource in user model, follow sorcery
+    instructions (remember to add property id, validators and accessor
+attributes such as password and password_confirmation)
+*   Option downcase__username_before_authenticating and dm-mysql,
+    http://datamapper.lighthouseapp.com/projects/20609/tickets/1105-add-support-for-definingchanging-default-collation
+
 ## Upgrading
 
 Important notes while upgrading:
+
+*   If you are upgrading from <= **0.8.5** and you're using Sorcery test helpers,
+    you need to change the way you include them to following code:
+
+        RSpec.configure do |config|
+          config.include Sorcery::TestHelpers::Rails::Controller, type: :controller
+          config.include Sorcery::TestHelpers::Rails::Integration, type: :feature
+        end
 
 *   If are upgrading to **0.8.2** and use activity_logging feature with
     ActiveRecord, you will have to add a new column
@@ -251,7 +278,7 @@ Important notes while upgrading:
     [#465](https://github.com/NoamB/sorcery/issues/465)
 *   Sinatra support existed until **v0.7.0** (including), but was dropped
     later due to being a maintenance nightmare.
-*   If upgrading from <= **0.6.1 to >= <b>0.7.0** you need to change
+*   If upgrading from <= **0.6.1 to >= **0.7.0** you need to change
     'username_attribute_name' to 'username_attribute_names' in initializer.
 *   If upgrading from <= **v0.5.1** to >= **v0.5.2** you need to explicitly
     set your user_class model in the initializer file.
@@ -294,5 +321,5 @@ twitter: @Kiiiir
 
 ## Copyright
 
-Copyright (c) 2010 Noam Ben Ari (nbenari@gmail.com). See LICENSE.txt for
+Copyright (c) 2010-2014 Noam Ben Ari (nbenari@gmail.com). See LICENSE.txt for
 further details.

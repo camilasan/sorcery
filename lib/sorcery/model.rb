@@ -7,89 +7,68 @@ module Sorcery
   # which when called adds the other capabilities to the class.
   # This method is also the place to configure the plugin in the Model layer.
   module Model
-    def self.included(klass)
-      klass.class_eval do
-        class << self
-          def authenticates_with_sorcery!
-            @sorcery_config = Config.new
-            self.class_eval do
-              extend ClassMethods # included here, before submodules, so they can be overriden by them.
-              include InstanceMethods
-              include TemporaryToken
-            end
+    def authenticates_with_sorcery!
+      @sorcery_config = Config.new
 
-            include_required_submodules!
+      extend ClassMethods # included here, before submodules, so they can be overriden by them.
+      include InstanceMethods
+      include TemporaryToken
 
-            # This runs the options block set in the initializer on the model class.
-            ::Sorcery::Controller::Config.user_config.tap{|blk| blk.call(@sorcery_config) if blk}
+      include_required_submodules!
 
-            init_mongoid_support! if defined?(Mongoid) and self.ancestors.include?(Mongoid::Document)
-            init_mongo_mapper_support! if defined?(MongoMapper) and self.ancestors.include?(MongoMapper::Document)
+      # This runs the options block set in the initializer on the model class.
+      ::Sorcery::Controller::Config.user_config.tap{|blk| blk.call(@sorcery_config) if blk}
 
-            init_orm_hooks!
+      define_base_fields
+      init_orm_hooks!
 
-            @sorcery_config.after_config << :add_config_inheritance if @sorcery_config.subclasses_inherit_config
-            @sorcery_config.after_config.each { |c| send(c) }
-          end
+      @sorcery_config.after_config << :add_config_inheritance if @sorcery_config.subclasses_inherit_config
+      @sorcery_config.after_config.each { |c| send(c) }
+    end
 
-          protected
+    private
 
-          # includes required submodules into the model class,
-          # which usually is called User.
-          def include_required_submodules!
-            self.class_eval do
-              @sorcery_config.submodules = ::Sorcery::Controller::Config.submodules
-              @sorcery_config.submodules.each do |mod|
-                begin
-                  include Submodules.const_get(mod.to_s.split('_').map {|p| p.capitalize}.join)
-                rescue NameError
-                  # don't stop on a missing submodule. Needed because some submodules are only defined
-                  # in the controller side.
-                end
-              end
-            end
-          end
+    def define_base_fields
+      self.class_eval do
+        sorcery_config.username_attribute_names.each do |username|
+          sorcery_adapter.define_field username, String, length: 255
+        end
+        unless sorcery_config.username_attribute_names.include?(sorcery_config.email_attribute_name)
+          sorcery_adapter.define_field sorcery_config.email_attribute_name, String, length: 255
+        end
+        sorcery_adapter.define_field sorcery_config.crypted_password_attribute_name, String, length: 255
+        sorcery_adapter.define_field sorcery_config.salt_attribute_name, String, length: 255
+      end
 
-          # defines mongoid fields on the model class,
-          # using 1.8.x hash syntax to perserve compatibility.
-          def init_mongoid_support!
-            self.class_eval do
-              sorcery_config.username_attribute_names.each do |username|
-                field username,         :type => String
-              end
-              field sorcery_config.email_attribute_name,            :type => String unless sorcery_config.username_attribute_names.include?(sorcery_config.email_attribute_name)
-              field sorcery_config.crypted_password_attribute_name, :type => String
-              field sorcery_config.salt_attribute_name,             :type => String
-            end
-          end
+    end
 
-          # defines mongo_mapper fields on the model class,
-          def init_mongo_mapper_support!
-            self.class_eval do
-              sorcery_config.username_attribute_names.each do |username|
-                key username, String
-              end
-              key sorcery_config.email_attribute_name, String unless sorcery_config.username_attribute_names.include?(sorcery_config.email_attribute_name)
-              key sorcery_config.crypted_password_attribute_name, String
-              key sorcery_config.salt_attribute_name, String
-            end
-          end
-
-          # add virtual password accessor and ORM callbacks.
-          def init_orm_hooks!
-            self.class_eval do
-              attr_accessor @sorcery_config.password_attribute_name
-              #attr_protected @sorcery_config.crypted_password_attribute_name, @sorcery_config.salt_attribute_name
-              before_save :encrypt_password, :if => Proc.new { |record|
-                record.send(sorcery_config.password_attribute_name).present?
-              }
-              after_save :clear_virtual_password, :if => Proc.new { |record|
-                record.send(sorcery_config.password_attribute_name).present?
-              }
-            end
+    # includes required submodules into the model class,
+    # which usually is called User.
+    def include_required_submodules!
+      self.class_eval do
+        @sorcery_config.submodules = ::Sorcery::Controller::Config.submodules
+        @sorcery_config.submodules.each do |mod|
+          begin
+            include Submodules.const_get(mod.to_s.split('_').map {|p| p.capitalize}.join)
+          rescue NameError
+            # don't stop on a missing submodule. Needed because some submodules are only defined
+            # in the controller side.
           end
         end
       end
+    end
+
+    # add virtual password accessor and ORM callbacks.
+    def init_orm_hooks!
+      sorcery_adapter.define_callback :before, :validation, :encrypt_password, if: Proc.new {|record|
+        record.send(sorcery_config.password_attribute_name).present?
+      }
+
+      sorcery_adapter.define_callback :after, :save, :clear_virtual_password, if: Proc.new {|record|
+        record.send(sorcery_config.password_attribute_name).present?
+      }
+
+      attr_accessor sorcery_config.password_attribute_name
     end
 
     module ClassMethods
@@ -111,7 +90,7 @@ module Sorcery
           credentials[0].downcase!
         end
 
-        user = find_by_credentials(credentials)
+        user = sorcery_adapter.find_by_credentials(credentials)
 
         set_encryption_attributes
 
@@ -183,6 +162,10 @@ module Sorcery
       def clear_virtual_password
         config = sorcery_config
         self.send(:"#{config.password_attribute_name}=", nil)
+
+        if respond_to?(:"#{config.password_attribute_name}_confirmation=")
+          self.send(:"#{config.password_attribute_name}_confirmation=", nil)
+        end
       end
 
       # calls the requested email method on the configured mailer
@@ -194,97 +177,6 @@ module Sorcery
           mail.deliver
         end
       end
-    end
-
-    # Each class which calls 'activate_sorcery!' receives an instance of this class.
-    # Every submodule which gets loaded may add accessors to this class so that all
-    # options will be configured from a single place.
-    class Config
-
-      attr_accessor :username_attribute_names,           # change default username attribute, for example, to use :email
-                                                        # as the login.
-
-                    :password_attribute_name,           # change *virtual* password attribute, the one which is used
-                                                        # until an encrypted one is generated.
-
-                    :email_attribute_name,              # change default email attribute.
-
-                    :downcase_username_before_authenticating, # downcase the username before trying to authenticate, default is false
-
-                    :crypted_password_attribute_name,   # change default crypted_password attribute.
-                    :salt_join_token,                   # what pattern to use to join the password with the salt
-                    :salt_attribute_name,               # change default salt attribute.
-                    :stretches,                         # how many times to apply encryption to the password.
-                    :encryption_key,                    # encryption key used to encrypt reversible encryptions such as
-                                                        # AES256.
-
-                    :subclasses_inherit_config,         # make this configuration inheritable for subclasses. Useful for
-                                                        # ActiveRecord's STI.
-
-                    :submodules,                        # configured in config/application.rb
-                    :before_authenticate,               # an array of method names to call before authentication
-                                                        # completes. used internally.
-
-                    :after_config                       # an array of method names to call after configuration by user.
-                                                        # used internally.
-
-      attr_reader   :encryption_provider,               # change default encryption_provider.
-                    :custom_encryption_provider,        # use an external encryption class.
-                    :encryption_algorithm               # encryption algorithm name. See 'encryption_algorithm=' below
-                                                        # for available options.
-
-      def initialize
-        @defaults = {
-          :@submodules                           => [],
-          :@username_attribute_names              => [:email],
-          :@password_attribute_name              => :password,
-          :@downcase_username_before_authenticating => false,
-          :@email_attribute_name                 => :email,
-          :@crypted_password_attribute_name      => :crypted_password,
-          :@encryption_algorithm                 => :bcrypt,
-          :@encryption_provider                  => CryptoProviders::BCrypt,
-          :@custom_encryption_provider           => nil,
-          :@encryption_key                       => nil,
-          :@salt_join_token                      => "",
-          :@salt_attribute_name                  => :salt,
-          :@stretches                            => nil,
-          :@subclasses_inherit_config            => false,
-          :@before_authenticate                  => [],
-          :@after_config                         => []
-        }
-        reset!
-      end
-
-      # Resets all configuration options to their default values.
-      def reset!
-        @defaults.each do |k,v|
-          instance_variable_set(k,v)
-        end
-      end
-
-      def username_attribute_names=(fields)
-        @username_attribute_names = fields.kind_of?(Array) ? fields : [fields]
-      end
-
-      def custom_encryption_provider=(provider)
-        @custom_encryption_provider = @encryption_provider = provider
-      end
-
-      def encryption_algorithm=(algo)
-        @encryption_algorithm = algo
-        @encryption_provider = case @encryption_algorithm.to_sym
-        when :none   then nil
-        when :md5    then CryptoProviders::MD5
-        when :sha1   then CryptoProviders::SHA1
-        when :sha256 then CryptoProviders::SHA256
-        when :sha512 then CryptoProviders::SHA512
-        when :aes256 then CryptoProviders::AES256
-        when :bcrypt then CryptoProviders::BCrypt
-        when :custom then @custom_encryption_provider
-        else raise ArgumentError.new("Encryption algorithm supplied, #{algo}, is invalid")
-        end
-      end
-
     end
 
   end

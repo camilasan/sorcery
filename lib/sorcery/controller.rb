@@ -72,13 +72,12 @@ module Sorcery
       end
 
       # attempts to auto-login from the sources defined (session, basic_auth, cookie, etc.)
-      # returns the logged in user if found, false if not (using old restful-authentication trick, nil != false).
+      # returns the logged in user if found, nil if not
       def current_user
-        if @current_user == false
-          false
-        else
-          @current_user ||= login_from_session || login_from_other_sources
+        unless defined?(@current_user)
+          @current_user = login_from_session || login_from_other_sources || nil
         end
+        @current_user
       end
 
       def current_user=(user)
@@ -127,11 +126,7 @@ module Sorcery
       end
 
       def login_from_session
-        @current_user = (user_class.find(session[:user_id]) if session[:user_id]) || false
-      rescue => exception
-        return false if defined?(Mongoid) and exception.is_a?(Mongoid::Errors::DocumentNotFound)
-        return false if defined?(ActiveRecord) and exception.is_a?(ActiveRecord::RecordNotFound)
-        raise exception
+        @current_user = (user_class.sorcery_adapter.find_by_id(session[:user_id]) if session[:user_id]) || nil
       end
 
       def after_login!(user, credentials = [])
@@ -156,66 +151,5 @@ module Sorcery
 
     end
 
-    module Config
-      class << self
-        attr_accessor :submodules,
-                      :user_class,                    # what class to use as the user class.
-                      :not_authenticated_action,      # what controller action to call for non-authenticated users.
-
-                      :save_return_to_url,            # when a non logged in user tries to enter a page that requires
-                                                      # login, save the URL he wanted to reach,
-                                                      # and send him there after login.
-
-                      :cookie_domain,                 # set domain option for cookies
-
-                      :login_sources,
-                      :after_login,
-                      :after_failed_login,
-                      :before_logout,
-                      :after_logout
-
-        def init!
-          @defaults = {
-            :@user_class                           => nil,
-            :@submodules                           => [],
-            :@not_authenticated_action             => :not_authenticated,
-            :@login_sources                        => [],
-            :@after_login                          => [],
-            :@after_failed_login                   => [],
-            :@before_logout                        => [],
-            :@after_logout                         => [],
-            :@save_return_to_url                   => true,
-            :@cookie_domain                        => nil
-          }
-        end
-
-        # Resets all configuration options to their default values.
-        def reset!
-          @defaults.each do |k,v|
-            instance_variable_set(k,v)
-          end
-        end
-
-        def update!
-          @defaults.each do |k,v|
-            instance_variable_set(k,v) if !instance_variable_defined?(k)
-          end
-        end
-
-        def user_config(&blk)
-          block_given? ? @user_config = blk : @user_config
-        end
-
-        def configure(&blk)
-          @configure_blk = blk
-        end
-
-        def configure!
-          @configure_blk.call(self) if @configure_blk
-        end
-      end
-      init!
-      reset!
-    end
-  end
+	end
 end
