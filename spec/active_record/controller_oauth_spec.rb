@@ -171,12 +171,12 @@ describe SorceryController do
     context "when jira" do
       before(:each) do
         sorcery_controller_property_set(:external_providers, [:jira])
-        sorcery_controller_external_property_set(:jira, :key, "YourConsumerKeyHere")
+        sorcery_controller_external_property_set(:jira, :key, "7810b8e317ebdc81601c72f8daecc0f1")
         sorcery_controller_external_property_set(:jira, :secret, "JiraLoginExample")
         sorcery_controller_external_property_set(:jira, :site, "http://localhost:2990/jira/plugins/servlet/oauth")
         sorcery_controller_external_property_set(:jira, :signature_method, "RSA-SHA1")
         sorcery_controller_external_property_set(:jira, :private_key_file, "rsakey.pem")
-        sorcery_controller_external_property_set(:jira, :callback_url, "http://localhost:3000/your-app-here/")
+        sorcery_controller_external_property_set(:jira, :callback_url, "http://localhost:3000/sessions/show/")
         create_new_external_user(:jira)
       end
 
